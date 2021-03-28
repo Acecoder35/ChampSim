@@ -1,0 +1,46 @@
+#include "ooo_cpu.h"
+
+#define GBHR_SIZE 512			// size of global branch history register
+#define GPHT_SIZE 4096			// size of global pattern history table
+#define TWELVE_BIT_MASK 0XFFF	// bit mask
+#define MAX_COUNTER 3			// counter for 2-bit saturation counter
+
+int global_branch_history_register[NUM_CPUS][GBHR_SIZE];
+int global_pattern_history_table[NUM_CPUS][GPHT_SIZE];
+
+void O3_CPU::initialize_branch_predictor()
+{
+    cout << "CPU " << cpu << " GAg branch predictor" << endl;
+
+    for(int i=0; i<GBHR_SIZE; i++)
+		global_branch_history_register[cpu][i] = 0;
+
+    for(int i=0; i<GPHT_SIZE; i++)
+		global_pattern_history_table[cpu][i] = 0;
+}
+
+uint8_t O3_CPU::predict_branch(uint64_t ip)
+{
+    int prediction = 1;
+	int hash = ip % GBHR_SIZE;	// hashing
+    int index = global_branch_history_register[cpu][hash];
+    
+    prediction = (global_pattern_history_table[cpu][index]  >= ((MAX_COUNTER + 1)/2)) ? 1 : 0;
+    return prediction;
+}
+
+void O3_CPU::last_branch_result(uint64_t ip, uint8_t taken)
+{
+	int hash = ip % GBHR_SIZE;	// hashing
+    int index = global_branch_history_register[cpu][hash];
+    
+    // update the PBHT with correct branch outcome
+    // left shift and insert the new value while masking the other extraneous bits
+    global_branch_history_register[cpu][hash] = ((global_branch_history_register[cpu][hash] << 1) & TWELVE_BIT_MASK) | taken;
+
+	// update the 2-bit saturation counter to correct state
+    if (taken && (global_pattern_history_table[cpu][index] < MAX_COUNTER))
+    	global_pattern_history_table[cpu][index]++;
+    else if ((taken == 0) && (global_pattern_history_table[cpu][index] > 0))
+		global_pattern_history_table[cpu][index]--;
+}
