@@ -1,7 +1,7 @@
 #include "ooo_cpu.h"
 
 #define ONEBIT_TABLE_SIZE 16384
-#define ONEBIT_PRIME 16381
+#define ONEBIT_PRIME 16383
 #define MAX_COUNTER 1
 int onebit_table[NUM_CPUS][ONEBIT_TABLE_SIZE];
 
